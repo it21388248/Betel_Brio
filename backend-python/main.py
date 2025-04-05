@@ -6,7 +6,7 @@ from dotenv import load_dotenv
 from routes.chat_routes import chat_bp
 from routes.file_routes import file_bp
 from routes.whatsapp_routes import whatsapp_bp
-from routes.kb_routes import kb_bp  # ✅ Import Knowledge Base route
+
 
 # Pinecone Initialization
 from utils.pinecone_handler import initialize_pinecone
