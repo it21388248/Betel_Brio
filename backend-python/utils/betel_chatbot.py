@@ -3,47 +3,16 @@ from utils.embeddings import get_embedding
 from utils.pinecone_handler import query_pinecone
 from openai import OpenAI
 from collections import defaultdict
+from utils.language_config import LANGUAGES
 import os
 
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 sessions = defaultdict(dict)
 
+# Field order for price prediction
 price_fields = ["Date", "Leaf_Type", "Leaf_Size", "Quality_Grade", "No_of_Leaves", "Location", "Season"]
 
-price_questions = {
-    "Date": "📅 What is the date? (YYYY-MM-DD)",
-    "Leaf_Type": (
-        "🌿 What is the leaf type?\n"
-        "1️⃣ Peedichcha\n"
-        "2️⃣ Korikan\n"
-        "3️⃣ Keti\n"
-        "4️⃣ Raan Keti"
-    ),
-    "Leaf_Size": (
-        "📏 What is the leaf size?\n"
-        "1️⃣ Small\n"
-        "2️⃣ Medium\n"
-        "3️⃣ Large"
-    ),
-    "Quality_Grade": (
-        "✅ What is the quality grade?\n"
-        "1️⃣ Ash\n"
-        "2️⃣ Dark"
-    ),
-    "No_of_Leaves": "🍃 How many leaves do you have?",
-    "Location": (
-        "📍 What is your location?\n"
-        "1️⃣ Kuliyapitiya\n"
-        "2️⃣ Naiwala\n"
-        "3️⃣ Apaladeniya"
-    ),
-    "Season": (
-        "🗓️ What season is it?\n"
-        "1️⃣ Dry\n"
-        "2️⃣ Rainy"
-    )
-}
-
+# Field options (number -> value)
 field_options = {
     "Leaf_Type": ["Peedichcha", "Korikan", "Keti", "Raan Keti"],
     "Leaf_Size": ["Small", "Medium", "Large"],
@@ -56,39 +25,79 @@ def handle_message(message, session_id="default"):
     session = sessions[session_id]
     message = message.strip().lower()
 
-    # Menu or greetings
-    if message in ["hi", "hello", "hey", "menu"]:
-        sessions[session_id] = {}  # reset session
+    # Step 1: Ask for language if not set
+    if "lang" not in session:
+        if message in ["1", "english"]:
+            session["lang"] = "en"
+            return LANGUAGES["en"]["greeting"]
+        elif message in ["2", "සිංහල", "sinhala"]:
+            session["lang"] = "si"
+            return LANGUAGES["si"]["greeting"]
+        elif message in ["3", "தமிழ்", "tamil"]:
+            session["lang"] = "ta"
+            return LANGUAGES["ta"]["greeting"]
+        else:
+            return (
+                "🌐 Please select your language / කරුණාකර භාෂාව තෝරන්න / தயவுசெய்து உங்கள் மொழியைத் தேர்ந்தெடுக்கவும்:\n\n"
+                "1️⃣ English\n"
+                "2️⃣ සිංහල\n"
+                "3️⃣ தமிழ்"
+            )
+
+    # Load language config
+    lang = session["lang"]
+    T = LANGUAGES[lang]
+
+    # Allow resetting language
+    if message == "menu":
+        session.clear()
         return (
-            "👋 Hello! I'm *BetelBrio*, your assistant for betel insights.\n\n"
-            "Please reply with:\n"
-            "1️⃣ *Start Price Prediction*\n"
-            "2️⃣ *Ask a Question*\n"
-            "3️⃣ *Market Info (Coming Soon)*"
+            "🌐 Please select your language / කරුණාකර භාෂාව තෝරන්න / தயவுசெய்து உங்கள் மொழியைத் தேர்ந்தெடுக்கவும்:\n\n"
+            "1️⃣ English\n"
+            "2️⃣ සිංහල\n"
+            "3️⃣ தமிழ்"
         )
 
-    # Option 1 - Price Prediction
+    # Greet / show menu again
+    if message in ["hi", "hello", "hey"]:
+        return T["greeting"]
+
+    # Start price prediction flow
     if message in ["1", "start price prediction"] or session.get("collecting_price"):
         session["collecting_price"] = True
+        session.setdefault("history", [])
         current_field = session.get("current_price_field")
+
+        # Handle back option
+        if message == "0":
+            if session["history"]:
+                prev_field = session["history"].pop()
+                session.pop(prev_field, None)
+                session["current_price_field"] = prev_field
+                return T["price_questions"][prev_field]
+            else:
+                return "🔙 You're already at the beginning of the form."
+
+        # Store field value
         if current_field:
-            # Convert number option to actual value if valid
             if current_field in field_options and message.isdigit():
                 index = int(message) - 1
                 if 0 <= index < len(field_options[current_field]):
                     session[current_field] = field_options[current_field][index]
+                    session["history"].append(current_field)
                 else:
-                    return f"❌ Invalid selection. Please choose a number:\n{price_questions[current_field]}"
+                    return T["invalid_option"].format(question=T["price_questions"][current_field])
             else:
                 session[current_field] = message
+                session["history"].append(current_field)
 
         # Ask next field
         for field in price_fields:
             if field not in session:
                 session["current_price_field"] = field
-                return price_questions[field]
+                return T["price_questions"][field]
 
-        # All fields collected – predict
+        # Predict price
         try:
             predicted_price = predict_price(
                 session["Date"],
@@ -104,37 +113,25 @@ def handle_message(message, session_id="default"):
         except Exception as e:
             return f"⚠️ Error predicting price: {str(e)}"
 
-    # Option 2 - Ask a Question
+    # Ask question flow
     if message in ["2", "ask question", "question"]:
-        return "🧠 Sure! Ask me anything related to betel farming or insights from the knowledge base."
+        return T["ask_question"]
 
-    # Option 3 - Market Info (Placeholder)
+    # Market info
     if message in ["3", "market", "market info"]:
-        return "📊 Market info is coming soon! Stay tuned."
+        return T["market_coming"]
 
-    # Fallback – use knowledge base via Pinecone + OpenAI
+    # Fallback to GPT + knowledge base
     embedding = get_embedding(message)
     context = query_pinecone(embedding)
     if not context:
-        return (
-            "⚠️ I can only answer based on the uploaded knowledge base or assist with predictions like price or demand.\n\n"
-            "Type *menu* to go back to main options."
-        )
+        return T["no_context"]
 
     response = client.chat.completions.create(
         model="gpt-3.5-turbo",
         messages=[
-            {
-                "role": "system",
-                "content": (
-                    "You are BetelBrio, a smart assistant who helps users with betel predictions "
-                    "and answers based on uploaded documents."
-                )
-            },
-            {
-                "role": "user",
-                "content": f"Question: {message}\n\nContext: {context}"
-            }
+            {"role": "system", "content": "You are BetelBrio, a smart assistant who helps users with betel predictions and answers based on uploaded documents."},
+            {"role": "user", "content": f"Question: {message}\n\nContext: {context}"}
         ]
     )
     return response.choices[0].message.content
