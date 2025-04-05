@@ -1,16 +1,11 @@
 from flask import Blueprint, request, jsonify
 from utils.predictor import predict_price
-from utils.embeddings import get_embedding
-from utils.pinecone_handler import query_pinecone
-from openai import OpenAI
 from collections import defaultdict
 import os
 from dotenv import load_dotenv
 
 load_dotenv()
 chat_bp = Blueprint("chat", __name__)
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
-
 sessions = defaultdict(dict)
 
 price_fields = ["Date", "Leaf_Type", "Leaf_Size", "Quality_Grade", "No_of_Leaves", "Location", "Season"]
@@ -74,37 +69,17 @@ def chat():
             except Exception as e:
                 return jsonify({"reply": f"⚠️ Error predicting price: {str(e)}"}), 500
 
-        # Free-form question handler
+        # Free-form question handler (redirects to /kb/ask)
         if message.lower() == "ask question":
             return jsonify({
-                "reply": "🧠 Sure! Ask me anything related to betel farming or insights from the knowledge base."
+                "reply": "🧠 Sure! Ask me anything related to betel farming or insights from the knowledge base.",
+                "redirect_to_kb": True  # signal for frontend to send next message to /kb/ask
             })
 
-        # Fallback to knowledge base (Pinecone + GPT)
-        embedding = get_embedding(message)
-        context = query_pinecone(embedding)
-        if not context:
-            return jsonify({
-                "reply": "⚠️ I can only answer based on the uploaded knowledge base or assist with predictions like price or demand."
-            })
-
-        response = client.chat.completions.create(
-            model="gpt-3.5-turbo",
-            messages=[
-                {
-                    "role": "system",
-                    "content": (
-                        "You are BetelBrio, a smart assistant who helps users with betel predictions "
-                        "and answers based on uploaded documents."
-                    )
-                },
-                {
-                    "role": "user",
-                    "content": f"Question: {message}\n\nContext: {context}"
-                }
-            ]
-        )
-        return jsonify({"reply": response.choices[0].message.content})
+        # If unrecognized message
+        return jsonify({
+            "reply": "🤖 Sorry, I didn't understand that. Please choose an option or type *menu*."
+        })
 
     except Exception as e:
         print("❌ Error in chat route:", e)
