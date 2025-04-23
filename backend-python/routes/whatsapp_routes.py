@@ -35,6 +35,10 @@ def whatsapp_reply():
         data = request.get_json()
         print("📨 Incoming:", data)
 
+        # ✅ Only handle user messages, not status updates
+        if "messages" not in data or "contacts" not in data:
+            return "skipped", 200
+
         wa_from = "+" + data["contacts"][0]["wa_id"]
         user_msg = data["messages"][0]["text"]["body"]
 
