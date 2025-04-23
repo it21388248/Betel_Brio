@@ -4,7 +4,9 @@ from utils.pinecone_handler import query_pinecone
 from openai import OpenAI
 from collections import defaultdict
 from utils.language_config import LANGUAGES
+from utils.airtable_service import save_report
 import os
+import pprint  # ✅ for debugging
 
 client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 sessions = defaultdict(dict)
@@ -24,7 +26,6 @@ def handle_message(message, session_id="default"):
     session = sessions[session_id]
     message = message.strip().lower()
 
-    # Set language if not chosen
     if "lang" not in session:
         if message in ["1", "english"]:
             session["lang"] = "en"
@@ -48,17 +49,11 @@ def handle_message(message, session_id="default"):
 
     if message == "menu":
         session.clear()
-        return (
-            "🌐 Please select your language / කරුණාකර භාෂාව තෝරන්න / தயவுசெய்து உங்கள் மொழியைத் தேர்ந்தெடுக்கவும்:\n\n"
-            "1️⃣ English\n"
-            "2️⃣ සිංහල\n"
-            "3️⃣ தமிழ்"
-        )
+        return handle_message("", session_id)
 
     if message in ["hi", "hello", "hey"]:
         return T["greeting"]
 
-    # ------------------ Option 1: Price Prediction ------------------
     if message in ["1", "start price prediction"] or session.get("collecting_price"):
         session["collecting_price"] = True
         session.setdefault("history", [])
@@ -90,7 +85,7 @@ def handle_message(message, session_id="default"):
                 return T["price_questions"][field]
 
         try:
-            predicted_price = predict_price(
+            predicted_price = float(predict_price(
                 session["Date"],
                 session["Leaf_Type"],
                 session["Leaf_Size"],
@@ -98,17 +93,39 @@ def handle_message(message, session_id="default"):
                 int(session["No_of_Leaves"]),
                 session["Location"],
                 session["Season"]
-            )
+            ))
+
+            # ✅ Prepare record and debug log
+            airtable_record = {
+                "query": "Price Prediction",
+                "response": f"Price: {predicted_price}",
+                "prediction": {
+                    "Date": session["Date"],
+                    "Leaf_Type": session["Leaf_Type"],
+                    "Leaf_Size": session["Leaf_Size"],
+                    "Quality_Grade": session["Quality_Grade"],
+                    "No_of_Leaves": int(session["No_of_Leaves"]),
+                    "Location": session["Location"],
+                    "Season": session["Season"],
+                    "Predicted_Price": float(predicted_price)
+                }
+            }
+
+            print("\n📤 DEBUG: Payload to Airtable:")
+            pprint.pprint(airtable_record)
+
+            # ✅ Save to Airtable
+            save_report(**airtable_record)
+
             sessions.pop(session_id, None)
             return f"💰 Predicted price per leaf: *{predicted_price}*"
+
         except Exception as e:
             return f"⚠️ Error predicting price: {str(e)}"
 
-    # ------------------ Option 2: Ask Question ------------------
     if message in ["2", "ask question", "question"]:
         return T["ask_question"]
 
-    # ------------------ Option 3: Market Prediction ------------------
     if message in ["3", "market", "market info"] or session.get("collecting_market"):
         session["collecting_market"] = True
         session.setdefault("market", {})
@@ -127,8 +144,7 @@ def handle_message(message, session_id="default"):
                 market.pop(prev_field, None)
                 session["current_market_field"] = prev_field
                 return T["price_questions"][prev_field]
-            else:
-                return "🔙 You're already at the beginning of the form."
+            return "🔙 You're already at the beginning of the form."
 
         if current_field:
             if current_field in field_options and message.isdigit():
@@ -160,7 +176,6 @@ def handle_message(message, session_id="default"):
         except Exception as e:
             return f"⚠️ Error predicting market: {str(e)}"
 
-    # ------------------ Fallback to Knowledge Base ------------------
     embedding = get_embedding(message)
     context = query_pinecone(embedding)
     if not context:
