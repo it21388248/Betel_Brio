@@ -118,7 +118,14 @@ def handle_message(message, session_id="default"):
             save_report(**airtable_record)
 
             sessions.pop(session_id, None)
-            return f"💰 Predicted price per leaf: *{predicted_price}*"
+       # ✅ Return localized predicted price message
+            if lang == "si":
+                return f"💰 පත්‍රයකට අනූනාත්මක මිල: *{predicted_price}*"
+            elif lang == "ta":
+                return f"💰 ஒரு இலைக்கு கணிக்கப்பட்ட விலை: *{predicted_price}*"
+            else:
+                return f"💰 Predicted price per leaf: *{predicted_price}*"
+
 
         except Exception as e:
             return f"⚠️ Error predicting price: {str(e)}"
