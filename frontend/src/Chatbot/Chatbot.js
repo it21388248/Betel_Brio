@@ -110,12 +110,12 @@ const Chatbot = () => {
   return (
     <div className="max-w-xl mx-auto mt-10 border rounded-lg shadow-md overflow-hidden">
       {/* Header */}
-      <div className="bg-green-700 text-white text-lg font-semibold px-6 py-3 flex items-center gap-2">
+      {/* <div className="bg-green-700 text-white text-lg font-semibold px-6 py-3 flex items-center gap-2">
         <span className="text-xl">🍃</span> Betel Bot Chat
-      </div>
+      </div> */}
 
       {/* Messages */}
-      <div className="h-96 overflow-y-auto bg-white px-4 py-3">
+      <div className="h-96 overflow-y-auto bg-white px-7 py-3">
         {messages.map((msg, index) => (
           <div
             key={index}
