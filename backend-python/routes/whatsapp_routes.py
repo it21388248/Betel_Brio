@@ -10,6 +10,9 @@ whatsapp_bp = Blueprint("whatsapp", __name__)
 API_KEY = os.getenv("D360_API_KEY")
 WHATSAPP_API_URL = os.getenv("WHATSAPP_API_URL")  # e.g., https://waba.360dialog.io/v1/messages
 
+# ✅ Simple session tracking for message IDs
+temp_sessions = {}
+
 def send_whatsapp_message(recipient_id, message_text):
     headers = {
         "D360-API-KEY": API_KEY,
@@ -35,17 +38,36 @@ def whatsapp_reply():
         data = request.get_json()
         print("📨 Incoming:", data)
 
-        # ✅ Only handle user messages, not status updates
-        if "messages" not in data or "contacts" not in data:
-            return "skipped", 200
+        if "messages" not in data or not data["messages"]:
+            return "skipped - no message", 200
+
+        message_obj = data["messages"][0]
+
+        # ✅ Ignore non-text or non-user messages
+        if message_obj.get("type") != "text" or "text" not in message_obj:
+            return "ignored - not a user text", 200
 
         wa_from = "+" + data["contacts"][0]["wa_id"]
-        user_msg = data["messages"][0]["text"]["body"]
+        user_msg = message_obj["text"]["body"]
+        message_id = message_obj.get("id")
+
+        # ✅ Ignore duplicate message
+        if temp_sessions.get(wa_from) == message_id:
+            print("🔁 Duplicate message ignored")
+            return "duplicate", 200
+        temp_sessions[wa_from] = message_id
 
         # 🧠 Handle message
-        reply_text = handle_message(user_msg, session_id=wa_from)
-        if not reply_text or not isinstance(reply_text, str):
-            reply_text = "⚠️ Sorry, I couldn't process your request."
+        response_data = handle_message(user_msg, session_id=wa_from)
+        if isinstance(response_data, str):
+            reply_text = response_data
+        elif isinstance(response_data, dict):
+            reply_text = response_data.get("reply", "⚠️ Sorry, I couldn't process your request.")
+            if response_data.get("redirect_to_kb"):
+                kb_response = requests.post("http://localhost:5000/api/kb/ask", json={"message": user_msg}).json()
+                reply_text = kb_response.get("reply", "⚠️ KB error.")
+        else:
+            reply_text = "⚠️ Unrecognized response format."
 
         # 📨 Send reply
         res = send_whatsapp_message(wa_from, reply_text)

@@ -1,4 +1,5 @@
 import os
+import openai
 from dotenv import load_dotenv
 from pinecone import Pinecone, ServerlessSpec
 
@@ -81,3 +82,81 @@ def delete_from_pinecone(file_id):
         print(f"🗑️ Deleted vector with ID: {file_id}")
     except Exception as e:
         print("❌ Error during delete:", e)
+
+
+ # backend-python/utils/openai_handler.py
+
+from openai import OpenAI
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+
+def retrieve_kb_answer(user_query):
+    try:
+        embedding_response = client.embeddings.create(
+            model="text-embedding-ada-002",
+            input=user_query
+        )
+        query_vector = embedding_response.data[0].embedding
+
+        retrieved_text = query_pinecone(query_vector, top_k=5)
+        if not retrieved_text:
+            return "❌ Sorry, I couldn't find anything relevant in the knowledge base."
+
+        prompt = f"""You are a helpful assistant for betel farming. Use the context below to answer the question.
+
+Context:
+{retrieved_text}
+
+Question: {user_query}
+Answer:"""
+
+        chat_response = client.chat.completions.create(
+            model="gpt-3.5-turbo",
+            messages=[
+                {"role": "system", "content": "You are an expert in betel farming."},
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.2
+        )
+
+        return chat_response.choices[0].message.content
+
+    except Exception as e:
+        print("❌ Error in retrieve_kb_answer:", e)
+        return "⚠️ Something went wrong while answering your question."
+
+    try:
+        # Step 1: Embed the user query
+        embedding_response = openai.Embedding.create(
+            input=user_query,
+            model="text-embedding-ada-002"
+        )
+        query_vector = embedding_response["data"][0]["embedding"]
+
+        # Step 2: Query Pinecone
+        retrieved_text = query_pinecone(query_vector, top_k=5)
+        if not retrieved_text:
+            return "❌ Sorry, I couldn't find anything relevant in the knowledge base."
+
+        # Step 3: Ask OpenAI to summarize
+        prompt = f"""You are a helpful assistant for betel farming. Use the below context to answer the question.
+
+Context:
+{retrieved_text}
+
+Question: {user_query}
+Answer:"""
+
+        response = openai.ChatCompletion.create(
+            model="gpt-3.5-turbo",
+            messages=[
+                {"role": "system", "content": "You are an expert in betel farming."},
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.2
+        )
+
+        return response["choices"][0]["message"]["content"]
+
+    except Exception as e:
+        print("❌ Error in retrieve_kb_answer:", e)
+        return "⚠️ Something went wrong while answering your question."
