@@ -15,6 +15,7 @@ const Chatbot = () => {
   const [options, setOptions] = useState([]);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [selectedDate, setSelectedDate] = useState(null);
+  const [apiRoute, setApiRoute] = useState("http://localhost:5000/api/chat/");
 
   const fieldOptions = {
     Leaf_Type: ["Peedichcha", "Korikan", "Keti", "Raan Keti"],
@@ -42,7 +43,7 @@ const Chatbot = () => {
     setShowDatePicker(false);
 
     try {
-      const response = await axios.post("http://localhost:5000/api/chat/", {
+      const response = await axios.post(apiRoute, {
         message: userMessage,
         session_id: "user1",
       });
@@ -72,6 +73,15 @@ const Chatbot = () => {
       if (response.data?.options) {
         const backendOptions = response.data.options.map((opt) => opt.value);
         setOptions(backendOptions);
+      }
+
+      if (response.data?.redirect_to_kb) {
+        setApiRoute("http://localhost:5000/api/kb/ask");
+      }
+
+      // Optional: Reset route to chat after asking from KB
+      if (apiRoute.includes("/kb/")) {
+        setApiRoute("http://localhost:5000/api/chat/");
       }
     } catch (error) {
       console.error("❌ Error from backend:", error);
@@ -113,14 +123,11 @@ const Chatbot = () => {
               msg.sender === "user" ? "justify-end" : "justify-start"
             }`}
           >
-            {/* Bot Avatar */}
             {msg.sender === "bot" && (
               <div className="flex-shrink-0 w-9 h-9 rounded-full bg-green-700 text-white flex items-center justify-center mr-2">
                 <FaRobot className="text-lg" />
               </div>
             )}
-
-            {/* Message Bubble */}
             <div
               className={`px-4 py-2 max-w-[75%] rounded-xl ${
                 msg.sender === "user"
@@ -130,8 +137,6 @@ const Chatbot = () => {
             >
               {msg.text}
             </div>
-
-            {/* User Avatar */}
             {msg.sender === "user" && (
               <div className="flex-shrink-0 w-9 h-9 rounded-full bg-amber-700 text-white flex items-center justify-center ml-2">
                 <FaUser className="text-lg" />
@@ -141,7 +146,7 @@ const Chatbot = () => {
         ))}
       </div>
 
-      {/* Options (Carousel Buttons) */}
+      {/* Options */}
       {options.length > 0 && (
         <div className="flex flex-wrap justify-center gap-2 px-4 py-2 bg-gray-50">
           {options.map((value, index) => (
