@@ -7,13 +7,13 @@ import Navbar from "./Chatbot/Navbar";
 import UploadedFiles from "./Chatbot/UploadedFiles";
 import Home from "./Chatbot/Home";
 import UploadDataSource from "./Chatbot/UploadDataSource";
+import HomePage from "./Chatbot/HomePage";
 
 export default function App() {
   return (
     <Router>
-      <Navbar />
       <Routes>
-        <Route path="/" element={<Home />} />
+        <Route path="/" element={<HomePage />} />
 
         <Route path="/chat" element={<Chatbot />} />
         <Route path="/upload" element={<UploadDataSource />} />
