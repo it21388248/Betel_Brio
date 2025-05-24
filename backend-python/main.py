@@ -19,7 +19,7 @@ from utils.airtable_service import save_report
 load_dotenv()
 
 app = Flask(__name__)
-CORS(app, resources={r"/api/*": {"origins": "*"}}, supports_credentials=True)
+CORS(app, resources={r"/api/*": {"origins": "https://betelbrio-j8k7.vercel.app/"}}, supports_credentials=True)
 
 # Initialize Pinecone
 initialize_pinecone()
