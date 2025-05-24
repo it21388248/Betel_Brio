@@ -25,7 +25,7 @@ const UploadDataSource = ({ onClose, onUploadSuccess }) => {
     try {
       setIsUploading(true);
       const response = await axios.post(
-        "http://betelbrio-production.up.railway.app:5000/api/files/upload",
+        "http://betelbrio-production.up.railway.app/api/files/upload",
         formData
       );
       setMessage(response.data.message);

@@ -7,7 +7,7 @@ const UploadedFiles = () => {
 
   const fetchFiles = async () => {
     try {
-      const response = await axios.get("http://betelbrio-production.up.railway.app:5000/api/files/list");
+      const response = await axios.get("http://betelbrio-production.up.railway.app/api/files/list");
       setFiles(response.data.files);
     } catch (error) {
       console.error("Error fetching files:", error);
@@ -23,7 +23,7 @@ const UploadedFiles = () => {
     if (!confirm) return;
 
     try {
-      await axios.delete(`http://localhost:5000/api/files/delete/${id}`);
+      await axios.delete(`http://betelbrio-production.up.railway.app/api/files/delete/${id}`);
       alert("✅ File deleted successfully.");
       fetchFiles(); // Refresh after deletion
     } catch (error) {
@@ -64,7 +64,7 @@ const UploadedFiles = () => {
                 </td>
                 <td className="border p-2 space-x-2">
                   <a
-                    href={`http://localhost:5000/uploads/${file.filename}`}
+                    href={`http://betelbrio-production.up.railway.app/uploads/${file.filename}`}
                     download={file.filename}
                     className="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-700"
                   >
