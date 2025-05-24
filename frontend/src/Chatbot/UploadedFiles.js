@@ -7,7 +7,7 @@ const UploadedFiles = () => {
 
   const fetchFiles = async () => {
     try {
-      const response = await axios.get("http://localhost:5000/api/files/list");
+      const response = await axios.get("http://betelbrio-production.up.railway.app:5000/api/files/list");
       setFiles(response.data.files);
     } catch (error) {
       console.error("Error fetching files:", error);
