@@ -8,6 +8,8 @@ import {
   FaTimes,
 } from "react-icons/fa";
 import Chatbot from "./Chatbot";
+import { Link } from "react-router-dom";
+
 import "react-datepicker/dist/react-datepicker.css";
 
 const HomePage = () => {
@@ -28,6 +30,9 @@ const HomePage = () => {
           <a href="#contact" className="hover:underline">
             Contact
           </a>
+          <Link to="/upload" className="hover:underline">
+            Upload PDF
+          </Link>
         </nav>
       </header>
 
