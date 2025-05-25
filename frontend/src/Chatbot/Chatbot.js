@@ -15,7 +15,7 @@ const Chatbot = () => {
   const [options, setOptions] = useState([]);
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [selectedDate, setSelectedDate] = useState(null);
-  const [apiRoute, setApiRoute] = useState("http://betelbrio-production.up.railway.app/api/chat/");
+  const [apiRoute, setApiRoute] = useState("http://localhost:5000/api/chat/");
 
   const fieldOptions = {
     Leaf_Type: ["Peedichcha", "Korikan", "Keti", "Raan Keti"],

@@ -12,6 +12,7 @@ import HomePage from "./Chatbot/HomePage";
 export default function App() {
   return (
     <Router>
+      <Navbar />
       <Routes>
         <Route path="/" element={<HomePage />} />
 
