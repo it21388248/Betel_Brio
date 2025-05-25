@@ -1,11 +1,12 @@
 import React, { useState } from "react";
 import axios from "axios";
-import LoadingPopup from "../popups/LoadingPopup";
+import { FaCloudUploadAlt } from "react-icons/fa";
+import { ToastContainer, toast } from "react-toastify";
+import "react-toastify/dist/ReactToastify.css";
 
 const UploadDataSource = ({ onClose, onUploadSuccess }) => {
   const [file, setFile] = useState(null);
   const [dataSourceName, setDataSourceName] = useState("");
-  const [message, setMessage] = useState("");
   const [isUploading, setIsUploading] = useState(false);
 
   const handleFileChange = (event) => {
@@ -14,7 +15,7 @@ const UploadDataSource = ({ onClose, onUploadSuccess }) => {
 
   const handleUpload = async () => {
     if (!file || !dataSourceName.trim()) {
-      setMessage("Please enter a name and select a file.");
+      toast.warning("⚠️ Please enter a name and select a file.");
       return;
     }
 
@@ -25,17 +26,17 @@ const UploadDataSource = ({ onClose, onUploadSuccess }) => {
     try {
       setIsUploading(true);
       const response = await axios.post(
-        "http://betelbrio-production.up.railway.app/api/files/upload",
+        "http://localhost:5000/api/files/upload",
         formData
       );
-      setMessage(response.data.message);
+      toast.success(" File uploaded and indexed!");
       setFile(null);
       setDataSourceName("");
-      onUploadSuccess && onUploadSuccess(); // Optional callback
-      onClose && onClose(); // Close modal after upload
+      onUploadSuccess && onUploadSuccess();
+      onClose && onClose();
     } catch (error) {
       console.error("❌ Upload failed:", error);
-      setMessage("❌ Error uploading file.");
+      toast.error("❌ Error uploading file.");
     } finally {
       setIsUploading(false);
     }
@@ -43,12 +44,41 @@ const UploadDataSource = ({ onClose, onUploadSuccess }) => {
 
   return (
     <>
-      {isUploading && <LoadingPopup message="Uploading..." subText="Hang tight!" />}
+      {/* Modal Background */}
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-gradient-to-b from-green-100 via-green-50 to-white">
+        <div className="bg-white w-[500px] p-6 rounded-lg shadow-xl text-center">
+          {/* Heading */}
+          <h2 className="text-2xl font-bold text-green-700 mb-2">
+            Upload Knowledge Base Files
+          </h2>
+          <p className="mb-4 text-gray-600 text-sm">
+            Add documents, PDFs, and other files to enhance your BetelBrio AI
+            with agricultural expertise.
+          </p>
 
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
-        <div className="bg-white w-[400px] p-6 rounded-lg shadow-lg relative">
-          <h2 className="text-xl font-bold mb-4 text-center">Upload a Data Source</h2>
+          {/* Upload Box */}
+          <div className="border-2 border-dashed border-green-400 bg-green-50 p-6 rounded-lg mb-4">
+            <div className="flex flex-col items-center">
+              <FaCloudUploadAlt className="text-green-600 text-4xl mb-2" />
+              <p className="text-gray-800 font-semibold mb-1">
+                Drop your files here
+              </p>
+              <p className="text-sm text-gray-500">
+                or click to browse from your computer
+              </p>
+              <input
+                type="file"
+                accept=".pdf,.txt,.doc,.docx,.csv,.xls,.xlsx"
+                onChange={handleFileChange}
+                className="mt-4 mb-2"
+              />
+              <p className="text-xs text-gray-500">
+                PDF, DOC | TXT, CSV | XLSX, XLS
+              </p>
+            </div>
+          </div>
 
+          {/* Data Source Name Input */}
           <input
             type="text"
             placeholder="Enter data source name"
@@ -57,15 +87,7 @@ const UploadDataSource = ({ onClose, onUploadSuccess }) => {
             className="mb-4 p-2 w-full border rounded"
           />
 
-          <input
-            type="file"
-            onChange={handleFileChange}
-            accept=".pdf,.txt,.doc,.docx,.csv"
-            className="mb-4 p-2 w-full border rounded"
-          />
-
-          {message && <p className="text-sm text-red-500 text-center mb-2">{message}</p>}
-
+          {/* Action Buttons */}
           <div className="flex justify-end space-x-2">
             <button
               className="px-4 py-2 border rounded"
@@ -76,14 +98,25 @@ const UploadDataSource = ({ onClose, onUploadSuccess }) => {
             </button>
             <button
               onClick={handleUpload}
-              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+              className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
               disabled={isUploading}
             >
-              Upload
+              {isUploading ? "Uploading..." : "Upload"}
             </button>
           </div>
         </div>
       </div>
+
+      {/* Toast Popup */}
+      <ToastContainer
+        position="top-right"
+        autoClose={3000}
+        hideProgressBar={false}
+        newestOnTop={false}
+        closeOnClick
+        pauseOnHover
+        theme="light"
+      />
     </>
   );
 };

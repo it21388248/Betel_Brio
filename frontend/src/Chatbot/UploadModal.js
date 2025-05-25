@@ -27,7 +27,7 @@ const UploadModal = ({ onClose, onUploadSuccess }) => {
 
     try {
       const response = await axios.post(
-        "http://betelbrio-production.up.railway.app/api/files/upload",
+        "http://localhost:5000/api/api/files/upload",
         formData,
         {
           headers: {

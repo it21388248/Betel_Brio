@@ -8,34 +8,14 @@ import {
   FaTimes,
 } from "react-icons/fa";
 import Chatbot from "./Chatbot";
-import { Link } from "react-router-dom";
-
-import "react-datepicker/dist/react-datepicker.css";
+import Navbar from "./Navbar"; // ✅ imported Navbar
+import Footer from "./Footer";
 
 const HomePage = () => {
   const [showChat, setShowChat] = useState(false);
 
   return (
     <div className="min-h-screen bg-white text-gray-800">
-      {/* Navbar */}
-      <header className="bg-green-700 text-white py-4 px-8 flex justify-between items-center">
-        <h1 className="text-2xl font-bold">BetelBrio</h1>
-        <nav className="space-x-6">
-          <a href="#features" className="hover:underline">
-            Features
-          </a>
-          <a href="#about" className="hover:underline">
-            About
-          </a>
-          <a href="#contact" className="hover:underline">
-            Contact
-          </a>
-          <Link to="/upload" className="hover:underline">
-            Upload PDF
-          </Link>
-        </nav>
-      </header>
-
       {/* Hero Section */}
       <section className="text-center py-20 px-4 bg-gray-50">
         <h2 className="text-4xl font-bold text-green-700 mb-4">
@@ -122,10 +102,7 @@ const HomePage = () => {
           </a>
         </div>
       </section>
-
-      <footer className="text-center py-4 text-sm text-gray-500 bg-gray-100">
-        © 2025 BetelBrio — All rights reserved.
-      </footer>
+      <Footer />
 
       {/* Chatbot Floating Widget */}
       <div className="fixed bottom-4 right-4 z-50">

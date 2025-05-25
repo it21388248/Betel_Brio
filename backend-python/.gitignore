@@ -24,3 +24,4 @@ venv/
 # Pytest
 .cache/
 .pytest_cache/
+uploads/

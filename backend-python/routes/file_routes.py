@@ -15,9 +15,58 @@ UPLOAD_DIR = "uploads"
 os.makedirs(UPLOAD_DIR, exist_ok=True)
 uploaded_files = load_files()  # ✅ Load file metadata from JSON
 
-
 @file_bp.route("/upload", methods=["POST"])
 def upload():
+    try:
+        print("🚀 Upload route hit")
+        file = request.files.get("file")
+        data_source = request.form.get("dataSourceName", "Unknown")
+        print(f"file: {file}, dataSource: {data_source}")
+
+        if not file:
+            return jsonify({"error": "No file uploaded"}), 400
+
+        filename = secure_filename(file.filename)
+        print(f"Sanitized filename: {filename}")
+
+        file_id = str(uuid.uuid4())
+        filepath = os.path.join(UPLOAD_DIR, f"{file_id}_{filename}")
+        print(f"Saving file to: {filepath}")
+        file.save(filepath)
+
+        text = extract_text(filepath)
+        print(f"Extracted text: {text[:100]}...")  # Print first 100 chars
+
+        if not text:
+            return jsonify({"error": "Text extraction failed"}), 400
+
+        from utils.chunker import split_text_into_chunks
+        chunks = split_text_into_chunks(text)
+        print(f"Chunks count: {len(chunks)}")
+
+        for i, chunk in enumerate(chunks):
+            chunk_id = f"{file_id}_{i}"
+            embedding = get_embedding(chunk)
+            if not embedding:
+                print(f"Skipping chunk {i} due to missing embedding")
+                continue
+            upsert_to_pinecone(chunk_id, embedding, chunk, filename, data_source)
+
+        file_entry = {
+            "id": file_id,
+            "filename": f"{file_id}_{filename}",
+            "timestamp": datetime.utcnow().isoformat(),
+            "dataSourceName": data_source
+        }
+        uploaded_files.append(file_entry)
+        save_files(uploaded_files)
+
+        return jsonify({"message": "File uploaded and indexed", "id": file_id})
+
+    except Exception as e:
+        print("❌ Upload error:", e)
+        return jsonify({"error": str(e)}), 500
+
     try:
         from utils.chunker import split_text_into_chunks  # ✅ Import inside to avoid circular import
         file = request.files["file"]
@@ -62,37 +111,6 @@ def upload():
         print("❌ Upload error:", e)
         return jsonify({"error": str(e)}), 500
 
-    try:
-        file = request.files["file"]
-        data_source = request.form.get("dataSourceName", "Unknown")
-
-        if not file:
-            return jsonify({"error": "No file uploaded"}), 400
-
-        filename = secure_filename(file.filename)
-        file_id = str(uuid.uuid4())
-        filepath = os.path.join(UPLOAD_DIR, filename)
-        file.save(filepath)
-
-        text = extract_text(filepath)
-        if not text:
-            return jsonify({"error": "Text extraction failed"}), 400
-
-        embedding = get_embedding(text)
-        upsert_to_pinecone(file_id, embedding, text, filename, data_source)
-
-        file_entry = {
-            "id": file_id,
-            "filename": filename,
-            "timestamp": datetime.utcnow().isoformat(),  # ✅ Correct date format
-            "dataSourceName": data_source
-        }
-        uploaded_files.append(file_entry)
-        save_files(uploaded_files)
-
-        return jsonify({"message": "File uploaded and indexed", "id": file_id})
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
 
 
 @file_bp.route("/list", methods=["GET"])

@@ -1,4 +1,5 @@
 from flask import Flask
+from flask import send_from_directory
 from flask_cors import CORS
 from dotenv import load_dotenv
 import os
@@ -21,7 +22,8 @@ load_dotenv()
 app = Flask(__name__)
 
 # CORS config for Vercel frontend
-CORS(app, resources={r"/api/*": {"origins": "https://betelbrio-j8k7.vercel.app"}}, supports_credentials=True)
+CORS(app, resources={r"/api/*": {"origins": "http://localhost:3000"}}, supports_credentials=True)
+
 
 # Initialize Pinecone
 initialize_pinecone()
@@ -30,7 +32,12 @@ initialize_pinecone()
 app.register_blueprint(chat_bp, url_prefix="/api/chat")
 app.register_blueprint(file_bp, url_prefix="/api/files")
 app.register_blueprint(whatsapp_bp)
+@app.route("/uploads/<filename>")
+def uploaded_file(filename):
+    return send_from_directory("uploads", filename)
 app.register_blueprint(kb_bp, url_prefix="/api/kb")
+
+@app.route('/api/files/list')
 
 # Test Route
 @app.route("/api/test-save-report")
